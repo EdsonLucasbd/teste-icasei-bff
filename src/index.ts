@@ -1,11 +1,23 @@
 import express from 'express';
 import path from 'path';
+import WebSocket from 'ws';
+const wss = new WebSocket.Server({ port: 8080 });
+
 
 interface FavoritesProps {
   videoId: string;
   title: string;
-  thumbnail: string;
 }
+
+wss.on('connection', (ws) => {
+  ws.on('message', (message) => {
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      }
+    });
+  });
+});
 
 const app = express();
 const port = 3000;
@@ -26,9 +38,16 @@ app.get('/mf_videos/favoritos.html', (req, res) => {
 });
 
 app.post('/mf_videos/add-favorite', (req, res) => {
-  const { videoId, title, thumbnail }: FavoritesProps = req.body;
-  favorites.push({ videoId, title, thumbnail });
+  const { videoId, title }: FavoritesProps = req.body;
+  favorites.push({ videoId, title });
   res.status(201).send('Added to favorites');
+});
+
+app.delete('/mf_videos/add-favorite', (req, res) => {
+  const { videoId }: FavoritesProps = req.body;
+  const newList = favorites.filter((favorites) => favorites.videoId !== videoId);
+  favorites = newList;
+  res.status(201).send('Removed from favorites');
 });
 
 app.get('/mf_videos/favorites', (req, res) => {
